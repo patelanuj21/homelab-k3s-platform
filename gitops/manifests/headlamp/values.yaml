@@ -1,0 +1,15 @@
+# LAN-only (Pi-hole record, no Cloudflare Tunnel rule); TLS from Traefik's
+# wildcard default cert. Users log in with a token from the scoped,
+# view-only ServiceAccount in gitops/manifests/headlamp/rbac/ -- not the
+# chart's own cluster-admin-bound pod ServiceAccount -- until SSO replaces
+# token login (see docs/dns-tls.md).
+ingress:
+  enabled: true
+  ingressClassName: traefik
+  hosts:
+    - host: k3s.anujpatel.net
+      paths:
+        - path: /
+          type: Prefix
+  tls:
+    - hosts: [k3s.anujpatel.net]

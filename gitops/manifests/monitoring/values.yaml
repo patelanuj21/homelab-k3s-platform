@@ -1,7 +1,11 @@
 # Homelab-scale settings: modest retention/storage, everything pinned to
 # k3s-agent-1 (the node sized 4-6 vCPU / 16-24GB specifically for this stack).
-# Grafana gets NO ingress/LoadBalancer -- access stays via `make grafana`
-# port-forward, per the platform's LoadBalancer-IP-conservation policy.
+#
+# Grafana/Prometheus/Alertmanager Ingress hosts are LAN-only -- resolved via
+# a Pi-hole local DNS record, no Cloudflare Tunnel rule, no auth in front
+# (Grafana has its own login; Prometheus/Alertmanager rely on the LAN
+# boundary until SSO is added in front of everything). TLS comes from
+# Traefik's wildcard default cert (see gitops/manifests/traefik/values.yaml).
 prometheus:
   prometheusSpec:
     nodeSelector: { kubernetes.io/hostname: k3s-agent-1 }
@@ -13,13 +17,35 @@ prometheus:
           resources:
             requests:
               storage: 20Gi
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    hosts: [prometheus.anujpatel.net]
+    paths: [/]
+    pathType: Prefix
+    tls:
+      - hosts: [prometheus.anujpatel.net]
 
 alertmanager:
   alertmanagerSpec:
     nodeSelector: { kubernetes.io/hostname: k3s-agent-1 }
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    hosts: [alertmanager.anujpatel.net]
+    paths: [/]
+    tls:
+      - hosts: [alertmanager.anujpatel.net]
 
 grafana:
   nodeSelector: { kubernetes.io/hostname: k3s-agent-1 }
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    hosts: [grafana.anujpatel.net]
+    path: /
+    tls:
+      - hosts: [grafana.anujpatel.net]
 
 kube-state-metrics:
   nodeSelector: { kubernetes.io/hostname: k3s-agent-1 }

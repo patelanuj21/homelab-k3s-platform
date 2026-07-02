@@ -1,0 +1,30 @@
+# Argo CD Application: Headlamp, a lightweight Kubernetes cluster UI.
+# The official Kubernetes Dashboard project is archived/unmaintained
+# (kubernetes/dashboard -> kubernetes-retired/dashboard) -- Headlamp is
+# its actively-maintained kubernetes-sigs successor.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: headlamp
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://kubernetes-sigs.github.io/headlamp/
+      chart: headlamp
+      targetRevision: "0.43.0"
+      helm:
+        valueFiles:
+          - $values/gitops/manifests/headlamp/values.yaml
+    - repoURL: https://github.com/patelanuj21/homelab-k3s-platform.git
+      targetRevision: main
+      ref: values
+    - repoURL: https://github.com/patelanuj21/homelab-k3s-platform.git
+      targetRevision: main
+      path: gitops/manifests/headlamp/rbac
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: headlamp
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true]

@@ -230,7 +230,15 @@
         values:
           server:
             extraArgs:
-              - --insecure   # plain HTTP inside cluster; UI stays behind kubectl port-forward (make argocd-ui), no LoadBalancer/ingress -- same policy as Grafana
+              - --insecure   # plain HTTP inside cluster; Traefik terminates TLS at the edge with the wildcard cert
+            ingress:
+              enabled: true
+              ingressClassName: traefik
+              hostname: argocd.anujpatel.net
+              tls: true
+              # LAN-only: resolved via a Pi-hole local DNS record, no
+              # Cloudflare Tunnel rule -- same policy as Grafana/Prometheus/
+              # Alertmanager in gitops/manifests/monitoring/values.yaml.
 
     - name: Apply the app-of-apps root Application
       kubernetes.core.k8s:

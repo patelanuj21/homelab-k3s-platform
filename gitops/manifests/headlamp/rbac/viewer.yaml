@@ -1,0 +1,24 @@
+# Scoped login identity for Headlamp -- read-only (built-in "view"
+# ClusterRole) rather than the chart's own cluster-admin-bound pod
+# ServiceAccount, since this UI is reachable by anything on the LAN with
+# no auth of its own yet. Mint a login token with:
+#
+#   kubectl -n headlamp create token headlamp-viewer --duration=8h
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: headlamp-viewer
+  namespace: headlamp
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: headlamp-viewer
+subjects:
+  - kind: ServiceAccount
+    name: headlamp-viewer
+    namespace: headlamp
+roleRef:
+  kind: ClusterRole
+  name: view
+  apiGroup: rbac.authorization.k8s.io
