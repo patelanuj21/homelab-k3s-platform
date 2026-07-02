@@ -228,9 +228,16 @@
         binary_path: "{{ helm_binary_path }}"
         wait: true
         values:
+          # server.insecure via configs.params (not just server.extraArgs) --
+          # the chart's own ingress template reads configs.params."server.insecure"
+          # to pick the Service's http (80) vs https (443) port for the Ingress
+          # backend. Setting only extraArgs left the Ingress pointed at 443,
+          # so Traefik tried a TLS handshake against Argo CD's plain-HTTP
+          # listener and got 502s.
+          configs:
+            params:
+              server.insecure: true
           server:
-            extraArgs:
-              - --insecure   # plain HTTP inside cluster; Traefik terminates TLS at the edge with the wildcard cert
             ingress:
               enabled: true
               ingressClassName: traefik
