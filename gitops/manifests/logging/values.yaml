@@ -2,9 +2,11 @@
 # Grafana/Prometheus already come from kube-prometheus-stack; disable this
 # chart's bundled copies so we don't run duplicate stacks.
 #
-# deploymentMode must be explicit: the chart defaults to SimpleScalable
-# (separate read/write/backend replicas), which conflicts with also setting
-# singleBinary.replicas > 0.
+# deploymentMode must be explicit, AND the chart's SimpleScalable defaults
+# (read/write/backend replicas: 3 each) must be zeroed -- the chart's
+# validation only special-cases deploymentMode for the *transitional* modes,
+# it still fails on any nonzero replica count in the other target regardless
+# of deploymentMode.
 deploymentMode: SingleBinary
 
 loki:
@@ -12,6 +14,15 @@ loki:
     replication_factor: 1
   storage:
     type: filesystem
+  schemaConfig:
+    configs:
+      - from: "2024-04-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: loki_index_
+          period: 24h
 
 singleBinary:
   replicas: 1
@@ -19,6 +30,13 @@ singleBinary:
   persistence:
     storageClass: local-path
     size: 10Gi
+
+read:
+  replicas: 0
+write:
+  replicas: 0
+backend:
+  replicas: 0
 
 monitoring:
   selfMonitoring:
