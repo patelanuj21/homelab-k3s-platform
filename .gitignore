@@ -1,0 +1,34 @@
+# secrets & local config -- never commit
+*.tfvars
+!*.tfvars.example
+*.pkrvars.hcl
+.env
+secrets/
+*.pem
+*.key
+ssh_host_*
+
+# Docs -- working notes, not part of the published portfolio repo
+docs/
+
+# Claude Code local session/tool state -- not project content
+.claude/
+
+# terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# packer
+packer_cache/
+*.auto.pkrvars.hcl
+
+# ansible
+*.retry
+kubeconfig
+*.kubeconfig
+
+# os / editor
+.DS_Store
+.idea/
+.vscode/
