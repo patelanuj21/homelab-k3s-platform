@@ -1,0 +1,52 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "argocd": {
+    "fileMatch": ["gitops/apps/.*\\.ya?ml$"]
+  },
+  "git-submodules": {
+    "enabled": true
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": ["^ansible/group_vars/all\\.yml$"],
+      "matchStrings": [
+        "k3s_version:\\s*v?(?<currentValue>[^\\s#]+)"
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "k3s-io/k3s",
+      "extractVersionTemplate": "^v?(?<version>.+)$"
+    },
+    {
+      "customType": "regex",
+      "fileMatch": ["^ansible/group_vars/all\\.yml$"],
+      "matchStrings": [
+        "kube_vip_tag_version:\\s*\"?v?(?<currentValue>[^\"\\s#]+)\"?"
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "kube-vip/kube-vip",
+      "extractVersionTemplate": "^v?(?<version>.+)$"
+    },
+    {
+      "customType": "regex",
+      "fileMatch": ["^ansible/site\\.yml$"],
+      "matchStrings": [
+        "metallb_version:\\s*\"v?(?<currentValue>[^\"]+)\""
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "metallb/metallb",
+      "extractVersionTemplate": "^v?(?<version>.+)$"
+    },
+    {
+      "customType": "regex",
+      "fileMatch": ["^ansible/site\\.yml$"],
+      "matchStrings": [
+        "argocd_chart_version:\\s*\"(?<currentValue>[^\"]+)\""
+      ],
+      "datasourceTemplate": "helm",
+      "depNameTemplate": "argo-cd",
+      "registryUrlTemplate": "https://argoproj.github.io/argo-helm"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+# Homelab-scale settings: modest retention/storage, everything pinned to
+# k3s-agent-1 (the node sized 4-6 vCPU / 16-24GB specifically for this stack).
+# Grafana gets NO ingress/LoadBalancer -- access stays via `make grafana`
+# port-forward, per the platform's LoadBalancer-IP-conservation policy.
+prometheus:
+  prometheusSpec:
+    nodeSelector: { kubernetes.io/hostname: k3s-agent-1 }
+    retention: 7d
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          resources:
+            requests:
+              storage: 20Gi
+
+alertmanager:
+  alertmanagerSpec:
+    nodeSelector: { kubernetes.io/hostname: k3s-agent-1 }
+
+grafana:
+  nodeSelector: { kubernetes.io/hostname: k3s-agent-1 }
+
+kube-state-metrics:
+  nodeSelector: { kubernetes.io/hostname: k3s-agent-1 }
+
+prometheusOperator:
+  nodeSelector: { kubernetes.io/hostname: k3s-agent-1 }

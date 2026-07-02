@@ -1,0 +1,27 @@
+# Argo CD Application: logging-agent (Grafana Alloy -- log shipping to Loki).
+# Kept as its own Application (separate from logging.yaml/Loki) so Argo CD
+# reports independent sync/health status per component. Deploys to the same
+# "logging" namespace as Loki, not a separate one.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: logging-agent
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: alloy
+      targetRevision: "0.9.2"
+      helm:
+        valueFiles:
+          - $values/gitops/manifests/logging-agent/values.yaml
+    - repoURL: https://github.com/patelanuj21/homelab-k3s-platform.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: logging
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true]

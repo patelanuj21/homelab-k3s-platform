@@ -1,0 +1,26 @@
+# Argo CD Application: Traefik ingress controller.
+# k3s's built-in Traefik is disabled (--disable traefik); this deploys it
+# explicitly so the version and Helm values are owned by GitOps.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: traefik
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://traefik.github.io/charts
+      chart: traefik
+      targetRevision: "33.2.1"
+      helm:
+        valueFiles:
+          - $values/gitops/manifests/traefik/values.yaml
+    - repoURL: https://github.com/patelanuj21/homelab-k3s-platform.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: traefik
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true]

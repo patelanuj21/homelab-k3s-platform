@@ -1,0 +1,27 @@
+# Argo CD Application: logging (Loki, log storage/query only).
+# The log-shipping agent (Alloy) is a separate Application -- see
+# logging-agent.yaml -- since it must run as a DaemonSet on every node
+# rather than being pinned to k3s-agent-1 like the rest of observability.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: logging
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: loki
+      targetRevision: "6.21.0"
+      helm:
+        valueFiles:
+          - $values/gitops/manifests/logging/values.yaml
+    - repoURL: https://github.com/patelanuj21/homelab-k3s-platform.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: logging
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true]

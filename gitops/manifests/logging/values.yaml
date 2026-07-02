@@ -1,0 +1,24 @@
+# Single-node-class Loki deployment (not HA) -- homelab scale.
+# Grafana/Prometheus already come from kube-prometheus-stack; disable this
+# chart's bundled copies so we don't run duplicate stacks.
+loki:
+  commonConfig:
+    replication_factor: 1
+  storage:
+    type: filesystem
+
+singleBinary:
+  replicas: 1
+  nodeSelector: { kubernetes.io/hostname: k3s-agent-1 }
+  persistence:
+    storageClass: local-path
+    size: 10Gi
+
+monitoring:
+  selfMonitoring:
+    enabled: false
+  lokiCanary:
+    enabled: false
+
+test:
+  enabled: false

@@ -1,0 +1,10 @@
+# POLICY INVARIANT: this is the ONLY Application in the whole platform that
+# should get service.type: LoadBalancer. MetalLB's LAN pool is only ~10 IPs
+# (192.168.10.50-59) -- every other app must be ClusterIP + routed through
+# Traefik ingress by hostname. Do not add a second LoadBalancer Service.
+service:
+  type: LoadBalancer
+
+ingressClass:
+  enabled: true
+  isDefaultClass: true

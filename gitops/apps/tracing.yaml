@@ -1,0 +1,25 @@
+# Argo CD Application: tracing (Tempo, single-binary mode -- homelab scale,
+# consistent with Loki's singleBinary choice in logging.yaml).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tracing
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: tempo
+      targetRevision: "1.10.3"
+      helm:
+        valueFiles:
+          - $values/gitops/manifests/tracing/values.yaml
+    - repoURL: https://github.com/patelanuj21/homelab-k3s-platform.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tracing
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true]

@@ -1,0 +1,19 @@
+# Argo CD Application: sample-app -- plain manifests (no Helm), since this
+# is an app we author ourselves rather than a third-party chart.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: sample-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/patelanuj21/homelab-k3s-platform.git
+    targetRevision: main
+    path: gitops/manifests/sample-app
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sample-app
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true]
