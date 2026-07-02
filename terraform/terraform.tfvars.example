@@ -1,0 +1,26 @@
+# Copy to terraform.tfvars (gitignored) and fill in.
+# proxmox_endpoint: the Proxmox host's vmbr0 — that's where the template lives.
+# proxmox_node names must match what Proxmox shows under Datacenter > Nodes.
+proxmox_endpoint     = "https://192.168.10.3:8006/"
+proxmox_token_id     = "terraform@pve!homelab"   # user@realm!tokenid
+proxmox_token_secret = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+template_id          = 9000
+template_node        = "pve"   # node where the Packer template lives; cross-node clones copy disk over the network
+ssh_public_key       = "ssh-ed25519 AAAA... you@host"
+gateway              = "192.168.10.1"
+dns                  = ["192.168.10.1"]
+
+# 3 servers + 2 agents, all on the one Proxmox host (vmbr0).
+# IPs are set via cloud-init — VMs do not use DHCP.
+# vm_user defaults to "ubuntu" -- only set if your image uses a different default user.
+# vm_user = "ubuntu"
+
+# disk_size defaults to 32 GB; ssd defaults to false.
+# Set ssd = true for nodes whose disk_storage_pool is backed by NVMe/SSD.
+nodes = {
+  k3s-server-1 = { proxmox_host = "pve",  cores = 2, memory_mb = 4096,  ip = "192.168.10.41/24", vm_id = 101, disk_storage_pool = "FAST", ssd = true }
+  k3s-server-2 = { proxmox_host = "pve",  cores = 2, memory_mb = 4096,  ip = "192.168.10.42/24", vm_id = 102, disk_storage_pool = "FAST", ssd = true }
+  k3s-server-3 = { proxmox_host = "pve",  cores = 2, memory_mb = 4096,  ip = "192.168.10.43/24", vm_id = 103, disk_storage_pool = "FAST", ssd = true }
+  k3s-agent-1  = { proxmox_host = "pve",  cores = 6, memory_mb = 24576, ip = "192.168.10.44/24", vm_id = 104, disk_storage_pool = "local-lvm", disk_size = 60 }
+  k3s-agent-2  = { proxmox_host = "pve",  cores = 4, memory_mb = 16384, ip = "192.168.10.45/24", vm_id = 105, disk_storage_pool = "local-lvm", disk_size = 60 }
+}
