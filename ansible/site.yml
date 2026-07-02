@@ -1,0 +1,234 @@
+---
+# Phase 1 bootstrap: k3s HA cluster + MetalLB
+#
+# Prerequisites:
+#   git submodule update --init
+#   ansible-galaxy collection install -r requirements.yml
+#
+# Run: ansible-playbook site.yml -i inventory.ini
+
+# kube-vip must be dropped into the k3s auto-deploy manifests directory BEFORE
+# k3s starts. k3s-ansible then boots server-1 with --cluster-init; kube-vip
+# starts, claims the VIP (192.168.10.40), and servers 2 & 3 join via that VIP.
+- name: Drop kube-vip manifest so k3s auto-deploys it on first boot
+  hosts: server
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Create k3s auto-deploy manifests directory
+      ansible.builtin.file:
+        path: /var/lib/rancher/k3s/server/manifests
+        state: directory
+        mode: "0700"
+
+    - name: Write kube-vip RBAC manifest
+      ansible.builtin.copy:
+        dest: /var/lib/rancher/k3s/server/manifests/kube-vip-rbac.yaml
+        mode: "0600"
+        content: |
+          apiVersion: v1
+          kind: ServiceAccount
+          metadata:
+            name: kube-vip
+            namespace: kube-system
+          ---
+          apiVersion: rbac.authorization.k8s.io/v1
+          kind: ClusterRole
+          metadata:
+            annotations:
+              rbac.authorization.kubernetes.io/autoupdate: "true"
+            name: system:kube-vip-role
+          rules:
+            - apiGroups: [""]
+              resources: ["services", "services/status", "nodes", "endpoints"]
+              verbs: ["list", "get", "watch", "update"]
+            - apiGroups: ["coordination.k8s.io"]
+              resources: ["leases"]
+              verbs: ["list", "get", "watch", "create", "update"]
+            - apiGroups: ["discovery.k8s.io"]
+              resources: ["endpointslices"]
+              verbs: ["list", "get", "watch", "update"]
+          ---
+          apiVersion: rbac.authorization.k8s.io/v1
+          kind: ClusterRoleBinding
+          metadata:
+            name: system:kube-vip-binding
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: ClusterRole
+            name: system:kube-vip-role
+          subjects:
+            - kind: ServiceAccount
+              name: kube-vip
+              namespace: kube-system
+
+    - name: Write kube-vip DaemonSet manifest (ARP/L2, control-plane VIP only)
+      ansible.builtin.copy:
+        dest: /var/lib/rancher/k3s/server/manifests/kube-vip.yaml
+        mode: "0600"
+        content: |
+          apiVersion: apps/v1
+          kind: DaemonSet
+          metadata:
+            name: kube-vip-ds
+            namespace: kube-system
+            labels:
+              app.kubernetes.io/name: kube-vip-ds
+              app.kubernetes.io/version: "{{ kube_vip_tag_version }}"
+          spec:
+            selector:
+              matchLabels:
+                app.kubernetes.io/name: kube-vip-ds
+            template:
+              metadata:
+                labels:
+                  app.kubernetes.io/name: kube-vip-ds
+                  app.kubernetes.io/version: "{{ kube_vip_tag_version }}"
+              spec:
+                affinity:
+                  nodeAffinity:
+                    requiredDuringSchedulingIgnoredDuringExecution:
+                      nodeSelectorTerms:
+                        - matchExpressions:
+                            - key: node-role.kubernetes.io/control-plane
+                              operator: Exists
+                containers:
+                  - name: kube-vip
+                    image: ghcr.io/kube-vip/kube-vip:{{ kube_vip_tag_version }}
+                    imagePullPolicy: Always
+                    args:
+                      - manager
+                    env:
+                      - name: vip_arp
+                        value: "true"
+                      - name: port
+                        value: "{{ api_port }}"
+                      - name: vip_interface
+                        value: "{{ kube_vip_iface }}"
+                      - name: vip_cidr
+                        value: "32"
+                      - name: dns_mode
+                        value: first
+                      - name: cp_enable
+                        value: "true"
+                      - name: cp_namespace
+                        value: kube-system
+                      - name: svc_enable
+                        value: "false"
+                      - name: vip_leaderelection
+                        value: "true"
+                      - name: vip_leasename
+                        value: plndr-cp-lock
+                      - name: vip_leaseduration
+                        value: "5"
+                      - name: vip_renewdeadline
+                        value: "3"
+                      - name: vip_retryperiod
+                        value: "1"
+                      - name: address
+                        value: "{{ api_endpoint }}"
+                    securityContext:
+                      capabilities:
+                        add:
+                          - NET_ADMIN
+                          - NET_RAW
+                hostNetwork: true
+                serviceAccountName: kube-vip
+                tolerations:
+                  - effect: NoSchedule
+                    operator: Exists
+                  - effect: NoExecute
+                    operator: Exists
+
+- name: Install k3s HA cluster (3 embedded-etcd servers + 2 agents) with kube-vip
+  import_playbook: vendor/k3s-ansible/playbooks/site.yml
+
+- name: Bootstrap MetalLB (L2 mode, LAN pool 192.168.10.50-59)
+  hosts: server[0]
+  gather_facts: false
+  become: true
+  vars:
+    metallb_version: "v0.14.9"
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  tasks:
+    - name: Apply MetalLB manifest
+      command: >
+        kubectl apply -f
+        https://raw.githubusercontent.com/metallb/metallb/{{ metallb_version }}/config/manifests/metallb-native.yaml
+      changed_when: true
+
+    - name: Wait for MetalLB controller to be ready
+      command: >
+        kubectl -n metallb-system wait deployment/controller
+        --for=condition=Available --timeout=120s
+
+    - name: Write MetalLB IP pool config
+      copy:
+        dest: /tmp/metallb-config.yaml
+        content: |
+          apiVersion: metallb.io/v1beta1
+          kind: IPAddressPool
+          metadata:
+            name: lan-pool
+            namespace: metallb-system
+          spec:
+            addresses:
+              - 192.168.10.50-192.168.10.59
+          ---
+          apiVersion: metallb.io/v1beta1
+          kind: L2Advertisement
+          metadata:
+            name: lan
+            namespace: metallb-system
+          spec:
+            ipAddressPools:
+              - lan-pool
+
+    - name: Apply MetalLB IP pool config
+      command: kubectl apply -f /tmp/metallb-config.yaml
+      changed_when: true
+
+# Argo CD bootstrap runs from the Ansible control node (not over SSH to a k3s
+# node, unlike the MetalLB play above): Helm isn't pre-baked onto any node the
+# way kubectl is, and the control node already has a working "k3s-ansible"
+# kubeconfig context (merged in by the k3s-ansible role above) plus a local
+# helm binary. Everything after Argo CD exists is GitOps-managed, not
+# Ansible-managed -- this play and the root-app apply below are the last
+# manual bootstrap steps in the whole pipeline.
+#
+# If this runs before gitops/root-app.yaml's repoURL is pushed/reachable,
+# both tasks still succeed -- Argo CD just shows the "root" Application in an
+# error/unknown sync state until the repo exists. Not a playbook bug.
+- name: Bootstrap Argo CD via Helm and apply the GitOps root Application
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    argocd_chart_version: "7.7.11"
+    argocd_namespace: argocd
+    kubeconfig_path: "{{ lookup('env', 'HOME') }}/.kube/config"
+    kubeconfig_context: k3s-ansible
+  tasks:
+    - name: Install/upgrade Argo CD via Helm (idempotent)
+      kubernetes.core.helm:
+        name: argocd
+        chart_ref: argo-cd
+        chart_repo_url: https://argoproj.github.io/argo-helm
+        chart_version: "{{ argocd_chart_version }}"
+        release_namespace: "{{ argocd_namespace }}"
+        create_namespace: true
+        kubeconfig: "{{ kubeconfig_path }}"
+        context: "{{ kubeconfig_context }}"
+        wait: true
+        values:
+          server:
+            extraArgs:
+              - --insecure   # plain HTTP inside cluster; UI stays behind kubectl port-forward (make argocd-ui), no LoadBalancer/ingress -- same policy as Grafana
+
+    - name: Apply the app-of-apps root Application
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ playbook_dir }}/../gitops/root-app.yaml"
+        kubeconfig: "{{ kubeconfig_path }}"
+        context: "{{ kubeconfig_context }}"

@@ -1,0 +1,6 @@
+---
+# Install before running: ansible-galaxy collection install -r requirements.yml
+collections:
+  - name: community.general   # required by k3s-ansible
+  - name: ansible.posix       # required by k3s-ansible
+  - name: kubernetes.core     # kubernetes.core.helm / .k8s modules for Argo CD bootstrap

@@ -1,0 +1,22 @@
+# k3s-ansible variables. Full reference: github.com/k3s-io/k3s-ansible
+---
+k3s_version: v1.35.1+k3s1            # verify latest patch at github.com/k3s-io/k3s/releases
+api_endpoint: "192.168.10.40"         # the kube-vip control-plane VIP
+api_port: 6443
+
+# Shared cluster token — must be identical on every node. Regenerate with:
+#   openssl rand -base64 48
+# Use ansible-vault for production; plaintext is acceptable for a homelab demo.
+token: "KFFhMfv18+v0Hw894wvbyXtxKoWtXGXaeZEpFtMn3Ax7fDfwAtSTd7jqvJ/EyJXM"
+
+# kube-vip provides the HA control-plane VIP across the 3 servers.
+kube_vip_tag_version: "v1.0.0"        # verify latest at github.com/kube-vip/kube-vip/releases
+# Network interface on Proxmox KVM VMs (Ubuntu 24.04 cloud-init, virtio NIC).
+# Confirmed via `ip -o link show` on the provisioned nodes -- predictable naming
+# isn't enabled, so it's the kernel's traditional eth0, not ensXX.
+kube_vip_iface: "eth0"
+
+# Disable both built-ins: MetalLB replaces servicelb; Traefik is deployed
+# separately via Argo CD so the version and config are explicitly managed.
+extra_server_args: "--disable servicelb --disable traefik"
+extra_agent_args: ""
