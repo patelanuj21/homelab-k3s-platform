@@ -1,0 +1,19 @@
+# Single wildcard cert for the whole domain -- every current and future
+# Traefik Ingress host under anujpatel.net reuses this Secret via
+# Traefik's tlsStore.default.defaultCertificate (see
+# gitops/manifests/traefik/values.yaml). Issued directly into the
+# traefik namespace so Traefik can reference the Secret without a
+# cross-namespace copy.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-anujpatel-net
+  namespace: traefik
+spec:
+  secretName: wildcard-anujpatel-net-tls
+  issuerRef:
+    name: letsencrypt-cloudflare
+    kind: ClusterIssuer
+  dnsNames:
+    - "anujpatel.net"
+    - "*.anujpatel.net"

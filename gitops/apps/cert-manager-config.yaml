@@ -1,0 +1,22 @@
+# Argo CD Application: ClusterIssuer + wildcard Certificate for
+# *.anujpatel.net. Split from cert-manager.yaml (sync-wave "1", after
+# cert-manager's CRDs -- sync-wave "0" -- are installed) because these
+# are CRD instances of cert-manager's own CRDs.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager-config
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/patelanuj21/homelab-k3s-platform.git
+    targetRevision: main
+    path: gitops/manifests/cert-manager-config
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }

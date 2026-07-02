@@ -1,9 +1,13 @@
 # Routed through Traefik, not its own LoadBalancer Service -- see the
 # policy invariant comment in gitops/manifests/traefik/values.yaml.
 #
-# sample-app.homelab.local will not resolve anywhere automatically; add a
-# manual /etc/hosts (or LAN DNS) entry pointing it at Traefik's MetalLB
-# external IP (kubectl -n traefik get svc) after Traefik syncs.
+# Pilot for the DNS+TLS cutover: sample.anujpatel.net does not resolve
+# anywhere automatically -- see docs/dns-tls.md for the required Pi-hole
+# local DNS record (and, for off-LAN access, the cloudflared tunnel
+# ingress rule) pointing it at Traefik's MetalLB external IP
+# (kubectl -n traefik get svc). TLS is served from the wildcard cert via
+# Traefik's default TLS store; the empty tls.secretName here just tells
+# Traefik to terminate this host on the websecure entrypoint.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -11,8 +15,11 @@ metadata:
   namespace: sample-app
 spec:
   ingressClassName: traefik
+  tls:
+    - hosts:
+        - sample.anujpatel.net
   rules:
-    - host: sample-app.homelab.local
+    - host: sample.anujpatel.net
       http:
         paths:
           - path: /

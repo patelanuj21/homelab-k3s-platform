@@ -1,0 +1,33 @@
+# Argo CD Application: cert-manager. Issues/renews TLS certs for
+# *.anujpatel.net via Let's Encrypt DNS-01 (see cert-manager-config.yaml
+# for the ClusterIssuer + wildcard Certificate, which depend on the CRDs
+# this Application installs).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  sources:
+    - repoURL: https://charts.jetstack.io
+      chart: cert-manager
+      targetRevision: "v1.20.0"
+      helm:
+        valueFiles:
+          - $values/gitops/manifests/cert-manager/values.yaml
+    - repoURL: https://github.com/patelanuj21/homelab-k3s-platform.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    # ServerSideApply is required: cert-manager's CRDs are large enough
+    # that client-side apply's last-applied-configuration annotation
+    # exceeds Kubernetes' 262144-byte annotation limit (same issue as
+    # monitoring's kube-prometheus-stack CRDs).
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]

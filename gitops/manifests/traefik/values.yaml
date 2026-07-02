@@ -8,3 +8,17 @@ service:
 ingressClass:
   enabled: true
   isDefaultClass: true
+
+ports:
+  web:
+    # Redirect all plain-HTTP traffic to HTTPS.
+    redirectTo:
+      port: websecure
+
+# Wildcard *.anujpatel.net cert from cert-manager (see
+# gitops/manifests/cert-manager-config/wildcard-certificate.yaml) as the
+# default cert for any Ingress host that doesn't specify its own.
+tlsStore:
+  default:
+    defaultCertificate:
+      secretName: wildcard-anujpatel-net-tls
