@@ -46,6 +46,17 @@ grafana:
     path: /
     tls:
       - hosts: [grafana.anujpatel.net]
+  # Loki/Tempo have no dashboard UI of their own -- both are queried
+  # through Grafana's Explore view, hence no separate Ingress for either.
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      access: proxy
+      url: http://logging-loki-gateway.logging:80
+    - name: Tempo
+      type: tempo
+      access: proxy
+      url: http://tracing-tempo.tracing:3100
 
 kube-state-metrics:
   nodeSelector: { kubernetes.io/hostname: k3s-agent-1 }
