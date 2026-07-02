@@ -23,4 +23,8 @@ spec:
     namespace: monitoring
   syncPolicy:
     automated: { prune: true, selfHeal: true }
-    syncOptions: [CreateNamespace=true]
+    # ServerSideApply is required: this chart's CRDs (Prometheus,
+    # Alertmanager, ThanosRuler, etc.) are large enough that client-side
+    # apply's kubectl.kubernetes.io/last-applied-configuration annotation
+    # exceeds Kubernetes' 262144-byte annotation limit.
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]
