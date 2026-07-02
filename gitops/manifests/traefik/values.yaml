@@ -4,6 +4,10 @@
 # Traefik ingress by hostname. Do not add a second LoadBalancer Service.
 service:
   type: LoadBalancer
+  # Pin to the first IP in MetalLB's lan-pool -- stable, memorable address
+  # for the one Service every DNS record in docs/dns-tls.md points at.
+  annotations:
+    metallb.io/loadBalancerIPs: 192.168.10.50
 
 ingressClass:
   enabled: true
