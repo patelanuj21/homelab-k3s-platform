@@ -209,6 +209,11 @@
     argocd_namespace: argocd
     kubeconfig_path: "{{ lookup('env', 'HOME') }}/.kube/config"
     kubeconfig_context: k3s-ansible
+    # kubernetes.core.helm requires Helm 3.x; the control node's default
+    # `helm` on PATH may be a newer major (e.g. Rancher Desktop ships Helm 4).
+    # Pin explicitly to a Helm 3 binary -- install via `brew install helm@3`
+    # if missing (keg-only, won't touch the default `helm` on PATH).
+    helm_binary_path: /opt/homebrew/opt/helm@3/bin/helm
   tasks:
     - name: Install/upgrade Argo CD via Helm (idempotent)
       kubernetes.core.helm:
@@ -220,6 +225,7 @@
         create_namespace: true
         kubeconfig: "{{ kubeconfig_path }}"
         context: "{{ kubeconfig_context }}"
+        binary_path: "{{ helm_binary_path }}"
         wait: true
         values:
           server:

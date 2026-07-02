@@ -1,6 +1,12 @@
 # Single-node-class Loki deployment (not HA) -- homelab scale.
 # Grafana/Prometheus already come from kube-prometheus-stack; disable this
 # chart's bundled copies so we don't run duplicate stacks.
+#
+# deploymentMode must be explicit: the chart defaults to SimpleScalable
+# (separate read/write/backend replicas), which conflicts with also setting
+# singleBinary.replicas > 0.
+deploymentMode: SingleBinary
+
 loki:
   commonConfig:
     replication_factor: 1

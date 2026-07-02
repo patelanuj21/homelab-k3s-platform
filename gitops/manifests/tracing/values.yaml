@@ -1,8 +1,9 @@
 # Tempo single-binary chart -- pinned to k3s-agent-1 like the rest of
 # observability. OTLP gRPC/HTTP receivers are enabled by default in recent
 # chart versions.
-tempo:
-  nodeSelector: { kubernetes.io/hostname: k3s-agent-1 }
+#
+# nodeSelector is a top-level key in this chart, NOT nested under `tempo:`.
+nodeSelector: { kubernetes.io/hostname: k3s-agent-1 }
 
 persistence:
   enabled: true
