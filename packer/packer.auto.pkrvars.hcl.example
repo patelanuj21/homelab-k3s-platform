@@ -1,0 +1,16 @@
+# Copy to packer.auto.pkrvars.hcl (gitignored) and fill in.
+# See docs/proxmox-setup.md for how to create the API token.
+proxmox_url          = "https://192.168.10.3:8006/api2/json"
+proxmox_node         = "pve"                    # node name shown in Proxmox UI under Datacenter
+proxmox_token_id     = "terraform@pve!homelab"  # user@realm!tokenid -- passed as 'username' to the plugin
+proxmox_token_secret = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"  # UUID secret only
+
+# Optional overrides (defaults suit a stock Proxmox install):
+# iso_file          = "local:iso/ubuntu-24.04.4-live-server-amd64.iso"
+# disk_storage_pool = "local-lvm"
+# network_bridge    = "vmbr0"
+# template_vm_id    = 9000
+# template_name     = "ubuntu-2404-k3s"
+# build_cores       = 2
+# build_memory      = 4096
+# disk_size         = "32G"

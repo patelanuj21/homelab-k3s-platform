@@ -1,0 +1,47 @@
+#cloud-config
+# Ubuntu autoinstall (subiquity) -- served by Packer's HTTP server during the
+# template build. Keeps config minimal: the heavy lifting is in scripts/prep.sh.
+autoinstall:
+  version: 1
+
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+
+  # DHCP during the Packer build -- the build VM only needs outbound internet
+  # access to run apt-get. Static IPs are injected per-clone by Terraform cloud-init.
+  network:
+    version: 2
+    ethernets:
+      ens18:
+        dhcp4: true
+
+  identity:
+    hostname: packer-build
+    username: ubuntu
+    # Build-time password (ubuntu). Replaced per-clone: Terraform cloud-init
+    # injects SSH keys and password auth is never enabled on the running nodes.
+    # To regenerate: printf 'ubuntu' | openssl passwd -6 -stdin
+    password: "$6$SomeSalt12345678$CIt5TQ2ufrtDn7MAPIwwy4k6Do9KpGfHVbyu.jxJ2RyEHRTafILwz8ic1xGqdXwMHU9xMZsTlkr0bchkwSR8X/"
+
+  ssh:
+    install-server: true
+    # Password auth on -- Packer needs it for the SSH connection to run prep.sh.
+    # It is never forwarded to the running nodes (cloud-init sets authorized_keys).
+    allow-pw: true
+
+  storage:
+    layout:
+      name: direct  # whole disk, single ext4 root -- no LVM overhead for k3s nodes
+
+  packages:
+    - qemu-guest-agent  # must be running before Packer polls for the VM's IP via the Proxmox API
+
+  late-commands:
+    # Allow the ubuntu user to sudo without a password so Packer's shell
+    # provisioner can run prep.sh without an interactive prompt.
+    - "echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/ubuntu"
+    - "chmod 440 /target/etc/sudoers.d/ubuntu"
+    # Ubuntu 24.04 uses socket-activated SSH; explicitly enable it so Packer can
+    # connect regardless of whether apt-get upgrade happens to restart the service.
+    - "curtin in-target --target=/target -- systemctl enable ssh"

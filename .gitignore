@@ -22,6 +22,8 @@ docs/
 # packer
 packer_cache/
 *.auto.pkrvars.hcl
+packer/downloaded_iso_path/
+*.iso
 
 # ansible
 *.retry
